@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: be-supper-db
+    restart: always
+    environment:
+      POSTGRES_DB: forgevault
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: be-supper-api
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:

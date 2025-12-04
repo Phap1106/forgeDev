@@ -1,0 +1,31 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Next.js build
+fe-supper/.next/
+fe-supper/out/
+
+# FE env
+fe-supper/.env.local
+fe-supper/.env
+fe-supper/.env.development
+fe-supper/.env.production
+
+# BE build & env
+be-supper/dist/
+be-supper/node_modules/
+be-supper/.env
+be-supper/.env.local
+be-supper/.env.docker
