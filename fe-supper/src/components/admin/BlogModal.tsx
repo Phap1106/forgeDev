@@ -1,286 +1,298 @@
+// src/components/admin/BlogModal.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import Modal from "./Modal";
-import type { BlogPost } from "@/app/admin/blog/page";
+import React, { useEffect, useState } from "react";
 
-type Props = {
-  open: boolean;
-  initialData: BlogPost | null;
-  onClose: () => void;
-  onSubmit: (data: Omit<BlogPost, "id" | "createdAt">) => void;
+export type BlogStatus = "draft" | "published";
+
+export type BlogPost = {
+  id?: string;
+  title: string;
+  slug: string;
+  author: string;
+  coverImageUrl?: string;
+  thumbnailUrl?: string;
+  excerpt: string;
+  content: string;
+  tags: string[];
+  status: BlogStatus;
+  scheduledAt?: string;
 };
 
-export default function BlogModal({
-  open,
-  initialData,
-  onClose,
-  onSubmit,
-}: Props) {
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [status, setStatus] =
-    useState<BlogPost["status"]>("draft");
-  const [author, setAuthor] = useState("");
-  const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
-  const [tags, setTags] = useState("");
-  const [scheduledAt, setScheduledAt] = useState<string>("");
+type Props = {
+  initial?: BlogPost | null;
+  aiDraft?: Partial<BlogPost> | null;
+  onClose: () => void;
+  onSave: (post: BlogPost) => void;
+};
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
+  const [title, setTitle] = useState(initial?.title ?? aiDraft?.title ?? "");
+  const [slug, setSlug] = useState(initial?.slug ?? aiDraft?.slug ?? "");
+  const [author, setAuthor] = useState(
+    initial?.author ?? aiDraft?.author ?? "ForgeVault Team"
+  );
+  const [coverImageUrl, setCoverImageUrl] = useState(
+    initial?.coverImageUrl ?? aiDraft?.coverImageUrl ?? ""
+  );
+  const [thumbnailUrl, setThumbnailUrl] = useState(
+    initial?.thumbnailUrl ?? aiDraft?.thumbnailUrl ?? ""
+  );
+  const [excerpt, setExcerpt] = useState(
+    initial?.excerpt ?? aiDraft?.excerpt ?? ""
+  );
+  const [content, setContent] = useState(
+    initial?.content ?? aiDraft?.content ?? ""
+  );
+  const [tags, setTags] = useState<string[]>(
+    initial?.tags ?? aiDraft?.tags ?? []
+  );
+  const [status, setStatus] = useState<BlogStatus>(
+    initial?.status ?? "draft"
+  );
+  const [scheduledAt, setScheduledAt] = useState(
+    initial?.scheduledAt ?? ""
+  );
+
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-
-    if (initialData) {
-      setTitle(initialData.title);
-      setSlug(initialData.slug);
-      setStatus(initialData.status);
-      setAuthor(initialData.author ?? "");
-      setCoverImageUrl(initialData.coverImageUrl ?? "");
-      setThumbnailUrl(initialData.thumbnailUrl ?? "");
-      setExcerpt(initialData.excerpt ?? "");
-      setContent(initialData.content ?? "");
-      setTags((initialData.tags ?? []).join(","));
-      setScheduledAt(
-        initialData.scheduledAt
-          ? initialData.scheduledAt.slice(0, 16)
-          : "",
-      );
-    } else {
-      setTitle("");
-      setSlug("");
-      setStatus("draft");
-      setAuthor("ForgeVault Team");
-      setCoverImageUrl("");
-      setThumbnailUrl("");
-      setExcerpt("");
-      setContent("");
-      setTags("");
-      setScheduledAt("");
+    if (!coverFile) {
+      setCoverPreview(coverImageUrl || null);
+      return;
     }
-    setErrors({});
-  }, [open, initialData]);
+    const url = URL.createObjectURL(coverFile);
+    setCoverPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [coverFile, coverImageUrl]);
 
-  const generateSlug = (raw: string) =>
-    raw
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    if (!initialData) {
-      setSlug(generateSlug(value));
+  useEffect(() => {
+    if (!thumbFile) {
+      setThumbPreview(thumbnailUrl || null);
+      return;
     }
-  };
+    const url = URL.createObjectURL(thumbFile);
+    setThumbPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [thumbFile, thumbnailUrl]);
 
-  const handleSubmit = () => {
-    const nextErrors: Record<string, string> = {};
-    if (!title.trim()) nextErrors.title = "Tiêu đề bắt buộc.";
-    if (!slug.trim()) nextErrors.slug = "Slug bắt buộc.";
-    if (!author.trim()) nextErrors.author = "Tác giả bắt buộc.";
-
-    if (status === "scheduled" && !scheduledAt) {
-      nextErrors.scheduledAt = "Hãy chọn thời gian hẹn đăng.";
-    }
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    const tagsArr = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-
-    onSubmit({
-      title,
-      slug,
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSave({
+      id: initial?.id,
+      title: title.trim(),
+      slug: slug.trim(),
+      author: author.trim(),
+      coverImageUrl: coverImageUrl.trim() || coverPreview || undefined,
+      thumbnailUrl: thumbnailUrl.trim() || thumbPreview || undefined,
+      excerpt: excerpt.trim(),
+      content,
+      tags: tags.map((t) => t.trim()).filter(Boolean),
       status,
-      author,
-      coverImageUrl: coverImageUrl || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
-      excerpt: excerpt || undefined,
-      content: content || undefined,
-      tags: tagsArr.length ? tagsArr : undefined,
-      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      scheduledAt: scheduledAt || undefined,
     });
-
-    onClose();
-  };
+  }
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={initialData ? "Chỉnh sửa bài viết" : "Thêm bài viết mới"}
-    >
-      <div className="space-y-4 text-sm">
-        <Field
-          label="Tiêu đề"
-          required
-          error={errors.title}
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-            />
-          }
-        />
-        <Field
-          label="Slug"
-          required
-          error={errors.slug}
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="slug-bai-viet"
-            />
-          }
-        />
-        <Field
-          label="Tác giả"
-          required
-          error={errors.author}
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="ForgeVault Team, Pháp,..."
-            />
-          }
-        />
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#050B10] border border-white/10 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">
+            {initial ? "Chỉnh sửa bài viết" : "Thêm bài viết mới"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 transition"
+          >
+            ✕
+          </button>
+        </div>
 
-        <Field
-          label="Cover image URL (ảnh lớn trên đầu bài)"
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://..."
-            />
-          }
-        />
-        <Field
-          label="Thumbnail URL (ảnh nhỏ hiển thị danh sách)"
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={thumbnailUrl}
-              onChange={(e) => setThumbnailUrl(e.target.value)}
-              placeholder="https://..."
-            />
-          }
-        />
+        <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Tiêu đề *
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Slug *
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="toi-uu-proxy-cho-tool-farm"
+                required
+              />
+            </div>
+          </div>
 
-        <Field
-          label="Tóm tắt (excerpt)"
-          input={
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Tác giả
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Trạng thái
+              </label>
+              <select
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as BlogStatus)}
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Cover image URL (ảnh lớn trên đầu bài)
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                placeholder="https://..."
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-2 block w-full text-xs text-white/70"
+                onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+              />
+              {coverPreview && (
+                <img
+                  src={coverPreview}
+                  alt="Cover preview"
+                  className="mt-2 w-full max-h-40 object-cover rounded-xl border border-white/10"
+                />
+              )}
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Thumbnail URL (ảnh nhỏ hiển thị danh sách)
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                placeholder="https://..."
+                value={thumbnailUrl}
+                onChange={(e) => setThumbnailUrl(e.target.value)}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="mt-2 block w-full text-xs text-white/70"
+                onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
+              />
+              {thumbPreview && (
+                <img
+                  src={thumbPreview}
+                  alt="Thumb preview"
+                  className="mt-2 w-32 h-20 object-cover rounded-xl border border-white/10"
+                />
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-white/60 mb-1">
+              Tóm tắt (excerpt)
+            </label>
             <textarea
-              rows={2}
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+              rows={3}
+              className="w-full rounded-xl bg-black/40 ring-1 ring-white/15 px-3 py-2"
               value={excerpt}
               onChange={(e) => setExcerpt(e.target.value)}
-              placeholder="Hiển thị ở card blog trên landing..."
             />
-          }
-        />
-        <Field
-          label="Nội dung chính (có thể viết Markdown)"
-          input={
+          </div>
+
+          <div>
+            <label className="block text-xs text-white/60 mb-1">
+              Nội dung chính (có thể viết Markdown)
+            </label>
             <textarea
-              rows={6}
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+              rows={10}
+              className="w-full rounded-xl bg-black/40 ring-1 ring-white/15 px-3 py-2 font-mono text-xs"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Tool này được thiết kế để giúp bạn tiết kiệm thời gian thao tác lặp lại..."
             />
-          }
-        />
-        <Field
-          label="Tags (phân cách bằng dấu phẩy)"
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="tiktok,proxy,account-farm"
-            />
-          }
-        />
-
-        <div className="grid gap-3 sm:grid-cols-[1.2fr_1.5fr]">
-          <div>
-            <p className="mb-1 text-xs font-medium text-white/70">
-              Trạng thái bài viết
-            </p>
-            <select
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value as BlogPost["status"])
-              }
-            >
-              <option value="draft">Draft</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="published">Published</option>
-            </select>
           </div>
-          <Field
-            label="Thời gian hẹn đăng (nếu Scheduled)"
-            error={errors.scheduledAt}
-            input={
+
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Tags (phân cách bằng dấu phẩy)
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+                value={tags.join(",")}
+                onChange={(e) =>
+                  setTags(
+                    e.target.value
+                      .split(",")
+                      .map((t) => t.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Thời gian hẹn đăng (nếu Scheduled)
+              </label>
               <input
                 type="datetime-local"
-                className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
               />
-            }
-          />
-        </div>
+            </div>
+          </div>
 
-        <div className="pt-2 text-right">
-          <button
-            onClick={handleSubmit}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
-          >
-            {initialData ? "Lưu thay đổi" : "Tạo bài viết"}
-          </button>
-        </div>
+          <div className="flex justify-end gap-2 pt-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 px-4 rounded-xl bg-black/40 text-xs text-white/75 ring-1 ring-white/15 hover:bg-black/60 transition"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="h-10 px-4 rounded-xl bg-emerald-400 text-black text-sm font-semibold hover:bg-emerald-300 transition"
+            >
+              {initial ? "Lưu thay đổi" : "Tạo bài viết"}
+            </button>
+          </div>
+        </form>
       </div>
-    </Modal>
-  );
-}
-
-function Field({
-  label,
-  required,
-  error,
-  input,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  input: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-white/70">
-        <span>{label}</span>
-        {required && <span className="text-red-400">*</span>}
-      </div>
-      {input}
-      {error && <p className="mt-1 text-[11px] text-red-400">{error}</p>}
     </div>
   );
 }
+
+export default BlogModal;
