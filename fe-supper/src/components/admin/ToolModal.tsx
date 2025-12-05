@@ -1,293 +1,402 @@
+// src/components/admin/ToolModal.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import Modal from "./Modal";
-import type { Tool } from "@/app/admin/tools/page";
+import React, { useEffect, useMemo, useState } from "react";
 
-type Props = {
-  open: boolean;
-  initialData: Tool | null;
-  onClose: () => void;
-  onSubmit: (data: Omit<Tool, "id">) => void;
+type DeliveryType = "online" | "download";
+type BillingMode = "one_time" | "rental";
+type RentalStrategy = "fixed_packages" | "user_choose";
+
+export type Tool = {
+  id?: string;
+  name: string;
+  category: string;
+  price: number; // one-time price mặc định
+  description: string;
+  deliveryType: DeliveryType;
+  billingMode: BillingMode;
+  hourlyPrice?: number;
+  rentalStrategy?: RentalStrategy;
+  rentalPackages?: string[];
+  downloadUrl?: string;
+  downloadFileName?: string;
 };
 
-export default function ToolModal({
-  open,
-  initialData,
-  onClose,
-  onSubmit,
-}: Props) {
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [price, setPrice] = useState<string>("");
-  const [delivery, setDelivery] = useState<"online" | "download">("online");
-  const [description, setDescription] = useState("");
-  const [assetMode, setAssetMode] = useState<"file" | "folder">("file");
-  const [assetInfo, setAssetInfo] = useState<string>("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+type Props = {
+  initial?: Tool | null;
+  onClose: () => void;
+  onSave: (tool: Tool) => void;
+};
+
+const RENTAL_OPTIONS = [
+  { key: "1d", label: "1 ngày", hours: 24 },
+  { key: "2d", label: "2 ngày", hours: 48 },
+  { key: "3d", label: "3 ngày", hours: 72 },
+  { key: "7d", label: "7 ngày", hours: 7 * 24 },
+  { key: "14d", label: "14 ngày", hours: 14 * 24 },
+  { key: "1m", label: "1 tháng", hours: 30 * 24 },
+  { key: "3m", label: "3 tháng", hours: 90 * 24 },
+  { key: "1y", label: "1 năm", hours: 365 * 24 },
+  { key: "2y", label: "2 năm", hours: 730 * 24 },
+  { key: "forever", label: "Vĩnh viễn", hours: 0 },
+];
+
+export function ToolModal({ initial, onClose, onSave }: Props) {
+  const [name, setName] = useState(initial?.name ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "Automation");
+  const [price, setPrice] = useState(initial?.price ?? 0);
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>(
+    initial?.deliveryType ?? "online"
+  );
+  const [billingMode, setBillingMode] = useState<BillingMode>(
+    initial?.billingMode ?? "one_time"
+  );
+  const [rentalStrategy, setRentalStrategy] =
+    useState<RentalStrategy>(initial?.rentalStrategy ?? "fixed_packages");
+  const [hourlyPrice, setHourlyPrice] = useState<number>(
+    initial?.hourlyPrice ?? 0
+  );
+  const [rentalPackages, setRentalPackages] = useState<string[]>(
+    initial?.rentalPackages ?? ["7d", "1m"]
+  );
+  const [downloadUrl, setDownloadUrl] = useState(initial?.downloadUrl ?? "");
+  const [downloadFile, setDownloadFile] = useState<File | null>(null);
+  const [downloadFilePreview, setDownloadFilePreview] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
-    if (!open) return;
-
-    if (initialData) {
-      setName(initialData.name);
-      setCategory(initialData.category);
-      setPrice(initialData.price.toString());
-      setDelivery(initialData.delivery);
-      setDescription(initialData.description ?? "");
-      setAssetMode(initialData.assetMode ?? "file");
-      setAssetInfo(initialData.assetInfo ?? "");
-    } else {
-      setName("");
-      setCategory("");
-      setPrice("");
-      setDelivery("online");
-      setDescription("");
-      setAssetMode("file");
-      setAssetInfo("");
-    }
-    setErrors({});
-  }, [open, initialData]);
-
-  const handleFilesChange = (files: FileList | null, mode: "file" | "folder") => {
-    if (!files || files.length === 0) {
-      setAssetInfo("");
+    if (!downloadFile) {
+      setDownloadFilePreview(null);
       return;
     }
+    const url = URL.createObjectURL(downloadFile);
+    setDownloadFilePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [downloadFile]);
 
-    if (mode === "file") {
-      if (files.length === 1) {
-        setAssetInfo(`File: ${files[0].name}`);
-      } else {
-        setAssetInfo(`${files.length} files được chọn`);
-      }
-    } else {
-      // folder: hiển thị tên thư mục đầu tiên
-      const first = files[0];
-      // @ts-expect-error webkitRelativePath chỉ có trên Chromium
-      const relPath: string | undefined = first.webkitRelativePath;
-      const folderName = relPath ? relPath.split("/")[0] : "Folder upload";
-      setAssetInfo(`Folder: ${folderName} (${files.length} files)`);
-    }
-  };
+  const isEdit = !!initial?.id;
 
-  const handleSubmit = () => {
-    const nextErrors: Record<string, string> = {};
-    if (!name.trim()) nextErrors.name = "Tên tool bắt buộc.";
-    if (!category.trim()) nextErrors.category = "Loại tool bắt buộc.";
-    if (!price || Number(price) <= 0)
-      nextErrors.price = "Giá phải là số > 0.";
+  const computedPackages = useMemo(() => {
+    if (!hourlyPrice || hourlyPrice <= 0) return [];
+    return RENTAL_OPTIONS.filter((opt) =>
+      rentalPackages.includes(opt.key)
+    ).map((opt) => ({
+      ...opt,
+      price:
+        opt.hours === 0
+          ? price || 0 // vĩnh viễn → dùng price one-time nếu có
+          : Math.round(hourlyPrice * opt.hours),
+    }));
+  }, [hourlyPrice, rentalPackages, price]);
 
-    if (delivery === "download" && !assetInfo) {
-      nextErrors.asset = "Cần chọn file hoặc folder để khách tải về.";
-    }
+  function toggleRentalPackage(key: string) {
+    setRentalPackages((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
 
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-    onSubmit({
-      name,
-      category,
-      price: Number(price),
-      delivery,
-      description,
-      imageUrl: initialData?.imageUrl,
-      assetMode,
-      assetInfo,
-    });
-    onClose();
-  };
+    const payload: Tool = {
+      id: initial?.id,
+      name: name.trim(),
+      category: category.trim(),
+      price: Number(price) || 0,
+      description: description.trim(),
+      deliveryType,
+      billingMode,
+      hourlyPrice:
+        billingMode === "rental" ? Number(hourlyPrice) || 0 : undefined,
+      rentalStrategy: billingMode === "rental" ? rentalStrategy : undefined,
+      rentalPackages:
+        billingMode === "rental" && rentalStrategy === "fixed_packages"
+          ? rentalPackages
+          : undefined,
+      downloadUrl: deliveryType === "download" ? downloadUrl.trim() : undefined,
+      downloadFileName:
+        deliveryType === "download" && downloadFile
+          ? downloadFile.name
+          : initial?.downloadFileName,
+    };
+
+    onSave(payload);
+  }
 
   return (
-    <Modal
-      open={open}
-      title={initialData ? "Chỉnh sửa tool" : "Thêm tool mới"}
-      onClose={onClose}
-    >
-      <div className="space-y-3 text-sm">
-        <Field
-          label="Tên tool"
-          required
-          error={errors.name}
-          input={
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-2xl rounded-3xl bg-[#050B10] border border-white/10 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.9)]">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">
+            {isEdit ? "Chỉnh sửa tool" : "Thêm tool mới"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="h-8 w-8 grid place-items-center rounded-xl bg-white/5 hover:bg-white/10 transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+          <div>
+            <label className="block text-xs text-white/60 mb-1">
+              Tên tool *
+            </label>
             <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+              className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3 focus:outline-none focus:ring-emerald-400/50"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              required
             />
-          }
-        />
-        <Field
-          label="Loại tool"
-          required
-          error={errors.category}
-          input={
-            <input
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Automation, Account, Proxy,..."
-            />
-          }
-        />
-        <Field
-          label="Giá (VNĐ)"
-          required
-          error={errors.price}
-          input={
-            <input
-              type="number"
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
-          }
-        />
-        <Field
-          label="Mô tả"
-          input={
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Loại tool *
+              </label>
+              <input
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3 focus:outline-none focus:ring-emerald-400/50"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Automation, Account, Proxy,…"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Giá bán trọn đời (VND) *
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3 focus:outline-none focus:ring-emerald-400/50"
+                value={price}
+                onChange={(e) => setPrice(Number(e.target.value))}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-white/60 mb-1">
+              Mô tả ngắn
+            </label>
             <textarea
               rows={3}
-              className="w-full rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-sm"
+              className="w-full rounded-xl bg-black/40 ring-1 ring-white/15 px-3 py-2 focus:outline-none focus:ring-emerald-400/50"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
-          }
-        />
-
-        {/* Hình thức cung cấp */}
-        <div>
-          <p className="mb-1 text-xs font-medium text-white/70">
-            Hình thức cung cấp
-          </p>
-          <div className="flex flex-col gap-2 text-xs sm:flex-row sm:items-center">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                className="accent-emerald-400"
-                checked={delivery === "online"}
-                onChange={() => setDelivery("online")}
-              />
-              <span>Online (chạy trực tiếp trên web)</span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                className="accent-emerald-400"
-                checked={delivery === "download"}
-                onChange={() => setDelivery("download")}
-              />
-              <span>Download (file / folder gửi cho khách)</span>
-            </label>
           </div>
-        </div>
 
-        {/* Upload file / folder – chỉ hiển thị khi chọn Download */}
-        {delivery === "download" && (
-          <div className="rounded-2xl border border-dashed border-emerald-500/40 bg-black/30 p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs font-medium text-white/80">
-                File / folder tải về cho khách hàng
-              </p>
-              <div className="flex gap-2 text-[11px]">
-                <button
-                  type="button"
-                  className={`rounded-full px-2 py-1 ${
-                    assetMode === "file"
-                      ? "bg-emerald-500 text-black"
-                      : "bg-white/10 text-white/70"
-                  }`}
-                  onClick={() => setAssetMode("file")}
-                >
-                  File
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-full px-2 py-1 ${
-                    assetMode === "folder"
-                      ? "bg-emerald-500 text-black"
-                      : "bg-white/10 text-white/70"
-                  }`}
-                  onClick={() => setAssetMode("folder")}
-                >
-                  Folder
-                </button>
+          {/* Hình thức cung cấp */}
+          <div className="space-y-2">
+            <span className="block text-xs text-white/60">
+              Hình thức cung cấp
+            </span>
+            <div className="flex gap-4 text-xs">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  className="accent-emerald-400"
+                  checked={deliveryType === "online"}
+                  onChange={() => setDeliveryType("online")}
+                />
+                <span>Online (chạy trực tiếp trên web)</span>
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  className="accent-emerald-400"
+                  checked={deliveryType === "download"}
+                  onChange={() => setDeliveryType("download")}
+                />
+                <span>Download (file / folder gửi cho khách)</span>
+              </label>
+            </div>
+          </div>
+
+          {deliveryType === "download" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-white/60 mb-1">
+                  Link download (URL)
+                </label>
+                <input
+                  className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3 focus:outline-none focus:ring-emerald-400/50"
+                  placeholder="https://..."
+                  value={downloadUrl}
+                  onChange={(e) => setDownloadUrl(e.target.value)}
+                />
+                <p className="mt-1 text-[11px] text-white/45">
+                  Sau này BE có thể dùng link từ storage (S3, GDrive, v.v…).
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs text-white/60 mb-1">
+                  Upload file (.zip, .rar, .pdf…)
+                </label>
+                <input
+                  type="file"
+                  className="block w-full text-xs text-white/70"
+                  onChange={(e) =>
+                    setDownloadFile(e.target.files?.[0] ?? null)
+                  }
+                />
+                {downloadFilePreview && (
+                  <p className="mt-1 text-[11px] text-white/50">
+                    Đã chọn file: {downloadFile?.name}
+                  </p>
+                )}
               </div>
             </div>
+          )}
 
-            <div className="flex flex-col gap-2 text-xs text-white/70">
-              {/* Upload file */}
-              {assetMode === "file" && (
+          {/* Hình thức thanh toán */}
+          <div className="space-y-3">
+            <span className="block text-xs text-white/60">
+              Hình thức thanh toán
+            </span>
+            <div className="flex flex-col md:flex-row gap-3 text-xs">
+              <label className="inline-flex items-center gap-2">
                 <input
-                  type="file"
-                  multiple
-                  className="block w-full text-xs text-white/70 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-500/10 file:px-3 file:py-2 file:text-xs file:font-medium hover:file:bg-emerald-500/20"
-                  onChange={(e) => handleFilesChange(e.target.files, "file")}
+                  type="radio"
+                  className="accent-emerald-400"
+                  checked={billingMode === "one_time"}
+                  onChange={() => setBillingMode("one_time")}
                 />
-              )}
-
-              {/* Upload folder – chỉ hoạt động tốt trên Chrome/Edge */}
-              {assetMode === "folder" && (
+                <span>Mua trọn đời (1 lần)</span>
+              </label>
+              <label className="inline-flex items-center gap-2">
                 <input
-                  type="file"
-                  multiple
-                  // @ts-expect-error: thuộc tính riêng của Chromium
-                  webkitdirectory="true"
-                  className="block w-full text-xs text-white/70 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-500/10 file:px-3 file:py-2 file:text-xs file:font-medium hover:file:bg-emerald-500/20"
-                  onChange={(e) => handleFilesChange(e.target.files, "folder")}
+                  type="radio"
+                  className="accent-emerald-400"
+                  checked={billingMode === "rental"}
+                  onChange={() => setBillingMode("rental")}
                 />
-              )}
-
-              <p className="text-[11px] text-white/50">
-                Sau khi kết nối backend, phần file/folder này sẽ được upload lên
-                server hoặc storage (S3, Google Drive…). Hiện tại UI chỉ lưu lại
-                mô tả để bạn cấu hình sau.
-              </p>
-
-              {assetInfo && (
-                <p className="rounded-xl bg-black/40 px-3 py-2 text-[11px] text-emerald-300">
-                  {assetInfo}
-                </p>
-              )}
-              {errors.asset && (
-                <p className="mt-1 text-[11px] text-red-400">{errors.asset}</p>
-              )}
+                <span>Thuê theo thời gian</span>
+              </label>
             </div>
+
+            {billingMode === "rental" && (
+              <div className="space-y-3 rounded-2xl bg-black/40 ring-1 ring-white/10 p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1">
+                      Giá theo giờ (VND) *
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-full h-10 rounded-xl bg-black/60 ring-1 ring-white/15 px-3 focus:outline-none focus:ring-emerald-400/50"
+                      value={hourlyPrice}
+                      onChange={(e) => setHourlyPrice(Number(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-white/60 mb-1">
+                      Cách tính thời gian thuê
+                    </label>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          className="accent-emerald-400"
+                          checked={rentalStrategy === "fixed_packages"}
+                          onChange={() =>
+                            setRentalStrategy("fixed_packages")
+                          }
+                        />
+                        <span>Gói cố định do admin set</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="radio"
+                          className="accent-emerald-400"
+                          checked={rentalStrategy === "user_choose"}
+                          onChange={() => setRentalStrategy("user_choose")}
+                        />
+                        <span>User tự chọn theo số giờ / ngày</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {rentalStrategy === "fixed_packages" && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-white/60">
+                      Chọn các gói thời gian cho thuê:
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                      {RENTAL_OPTIONS.map((opt) => (
+                        <label
+                          key={opt.key}
+                          className="inline-flex items-center gap-2 rounded-xl bg-black/60 px-2 py-1 ring-1 ring-white/10"
+                        >
+                          <input
+                            type="checkbox"
+                            className="accent-emerald-400"
+                            checked={rentalPackages.includes(opt.key)}
+                            onChange={() => toggleRentalPackage(opt.key)}
+                          />
+                          <span>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {computedPackages.length > 0 && (
+                      <div className="mt-2 rounded-xl bg-black/60 px-3 py-2 text-[11px] text-white/70 space-y-1">
+                        <p className="font-semibold text-xs">
+                          Bảng giá dự kiến (theo giờ * gói):
+                        </p>
+                        {computedPackages.map((pkg) => (
+                          <div
+                            key={pkg.key}
+                            className="flex justify-between border-t border-white/5 pt-1"
+                          >
+                            <span>{pkg.label}</span>
+                            <span>
+                              {pkg.hours === 0
+                                ? `${pkg.price.toLocaleString()} VND (vĩnh viễn)`
+                                : `${pkg.price.toLocaleString()} VND`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="pt-2 text-right">
-          <button
-            onClick={handleSubmit}
-            className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-400"
-          >
-            {initialData ? "Lưu thay đổi" : "Thêm tool"}
-          </button>
-        </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 px-4 rounded-xl bg-black/40 text-xs text-white/75 ring-1 ring-white/15 hover:bg-black/60 transition"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="h-10 px-4 rounded-xl bg-emerald-400 text-black text-sm font-semibold hover:bg-emerald-300 transition"
+            >
+              {isEdit ? "Lưu thay đổi" : "Thêm tool"}
+            </button>
+          </div>
+        </form>
       </div>
-    </Modal>
-  );
-}
-
-function Field({
-  label,
-  required,
-  error,
-  input,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  input: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="mb-1 flex items-center gap-1 text-xs font-medium text-white/70">
-        <span>{label}</span>
-        {required && <span className="text-red-400">*</span>}
-      </div>
-      {input}
-      {error && <p className="mt-1 text-[11px] text-red-400">{error}</p>}
     </div>
   );
 }
+
+export default ToolModal;
