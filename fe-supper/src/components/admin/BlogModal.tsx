@@ -12,6 +12,7 @@ export type BlogPost = {
   author: string;
   coverImageUrl?: string;
   thumbnailUrl?: string;
+  videoUrl?: string;
   excerpt: string;
   content: string;
   tags: string[];
@@ -30,35 +31,42 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
   const [title, setTitle] = useState(initial?.title ?? aiDraft?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? aiDraft?.slug ?? "");
   const [author, setAuthor] = useState(
-    initial?.author ?? aiDraft?.author ?? "ForgeVault Team"
+    initial?.author ?? aiDraft?.author ?? "ForgeVault Team",
   );
   const [coverImageUrl, setCoverImageUrl] = useState(
-    initial?.coverImageUrl ?? aiDraft?.coverImageUrl ?? ""
+    initial?.coverImageUrl ?? aiDraft?.coverImageUrl ?? "",
   );
   const [thumbnailUrl, setThumbnailUrl] = useState(
-    initial?.thumbnailUrl ?? aiDraft?.thumbnailUrl ?? ""
+    initial?.thumbnailUrl ?? aiDraft?.thumbnailUrl ?? "",
+  );
+  const [videoUrl, setVideoUrl] = useState(
+    initial?.videoUrl ?? aiDraft?.videoUrl ?? "",
   );
   const [excerpt, setExcerpt] = useState(
-    initial?.excerpt ?? aiDraft?.excerpt ?? ""
+    initial?.excerpt ?? aiDraft?.excerpt ?? "",
   );
   const [content, setContent] = useState(
-    initial?.content ?? aiDraft?.content ?? ""
+    initial?.content ?? aiDraft?.content ?? "",
   );
   const [tags, setTags] = useState<string[]>(
-    initial?.tags ?? aiDraft?.tags ?? []
+    initial?.tags ?? aiDraft?.tags ?? [],
   );
   const [status, setStatus] = useState<BlogStatus>(
-    initial?.status ?? "draft"
+    initial?.status ?? "draft",
   );
   const [scheduledAt, setScheduledAt] = useState(
-    initial?.scheduledAt ?? ""
+    initial?.scheduledAt ?? "",
   );
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [thumbPreview, setThumbPreview] = useState<string | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
+  // preview cover
   useEffect(() => {
     if (!coverFile) {
       setCoverPreview(coverImageUrl || null);
@@ -69,6 +77,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [coverFile, coverImageUrl]);
 
+  // preview thumb
   useEffect(() => {
     if (!thumbFile) {
       setThumbPreview(thumbnailUrl || null);
@@ -79,6 +88,17 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [thumbFile, thumbnailUrl]);
 
+  // preview video
+  useEffect(() => {
+    if (!videoFile) {
+      setVideoPreview(videoUrl || null);
+      return;
+    }
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [videoFile, videoUrl]);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSave({
@@ -88,6 +108,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
       author: author.trim(),
       coverImageUrl: coverImageUrl.trim() || coverPreview || undefined,
       thumbnailUrl: thumbnailUrl.trim() || thumbPreview || undefined,
+      videoUrl: videoUrl.trim() || videoPreview || undefined,
       excerpt: excerpt.trim(),
       content,
       tags: tags.map((t) => t.trim()).filter(Boolean),
@@ -116,6 +137,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+          {/* Tiêu đề + Slug */}
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
             <div>
               <label className="block text-xs text-white/60 mb-1">
@@ -142,6 +164,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
             </div>
           </div>
 
+          {/* Tác giả + Trạng thái */}
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
             <div>
               <label className="block text-xs text-white/60 mb-1">
@@ -168,7 +191,9 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
             </div>
           </div>
 
+          {/* Cover & Thumb */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* COVER */}
             <div>
               <label className="block text-xs text-white/60 mb-1">
                 Cover image URL (ảnh lớn trên đầu bài)
@@ -179,12 +204,29 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
                 value={coverImageUrl}
                 onChange={(e) => setCoverImageUrl(e.target.value)}
               />
+
+              {/* input ẩn + button upload */}
               <input
+                id="cover-upload"
                 type="file"
                 accept="image/*"
-                className="mt-2 block w-full text-xs text-white/70"
+                className="hidden"
                 onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
               />
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <label
+                  htmlFor="cover-upload"
+                  className="inline-flex items-center rounded-xl bg-white/5 px-3 py-1.5 cursor-pointer hover:bg-white/10 ring-1 ring-white/15"
+                >
+                  Chọn ảnh cover từ thiết bị
+                </label>
+                {coverFile && (
+                  <span className="text-white/60 truncate">
+                    {coverFile.name}
+                  </span>
+                )}
+              </div>
+
               {coverPreview && (
                 <img
                   src={coverPreview}
@@ -193,6 +235,8 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
                 />
               )}
             </div>
+
+            {/* THUMBNAIL */}
             <div>
               <label className="block text-xs text-white/60 mb-1">
                 Thumbnail URL (ảnh nhỏ hiển thị danh sách)
@@ -203,12 +247,28 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
               />
+
               <input
+                id="thumb-upload"
                 type="file"
                 accept="image/*"
-                className="mt-2 block w-full text-xs text-white/70"
+                className="hidden"
                 onChange={(e) => setThumbFile(e.target.files?.[0] ?? null)}
               />
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <label
+                  htmlFor="thumb-upload"
+                  className="inline-flex items-center rounded-xl bg-white/5 px-3 py-1.5 cursor-pointer hover:bg-white/10 ring-1 ring-white/15"
+                >
+                  Chọn thumbnail từ thiết bị
+                </label>
+                {thumbFile && (
+                  <span className="text-white/60 truncate">
+                    {thumbFile.name}
+                  </span>
+                )}
+              </div>
+
               {thumbPreview && (
                 <img
                   src={thumbPreview}
@@ -219,6 +279,49 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
             </div>
           </div>
 
+          {/* VIDEO */}
+          <div>
+            <label className="block text-xs text-white/60 mb-1">
+              Video URL (tuỳ chọn) / hoặc upload video từ thiết bị
+            </label>
+            <input
+              className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3"
+              placeholder="https://...mp4"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+            />
+
+            <input
+              id="video-upload"
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+            />
+            <div className="mt-2 flex items-center gap-2 text-xs">
+              <label
+                htmlFor="video-upload"
+                className="inline-flex items-center rounded-xl bg-white/5 px-3 py-1.5 cursor-pointer hover:bg-white/10 ring-1 ring-white/15"
+              >
+                Chọn video từ thiết bị
+              </label>
+              {videoFile && (
+                <span className="text-white/60 truncate">
+                  {videoFile.name}
+                </span>
+              )}
+            </div>
+
+            {videoPreview && (
+              <video
+                src={videoPreview}
+                controls
+                className="mt-2 w-full max-h-56 rounded-xl border border-white/10"
+              />
+            )}
+          </div>
+
+          {/* Excerpt */}
           <div>
             <label className="block text-xs text-white/60 mb-1">
               Tóm tắt (excerpt)
@@ -231,6 +334,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
             />
           </div>
 
+          {/* Content */}
           <div>
             <label className="block text-xs text-white/60 mb-1">
               Nội dung chính (có thể viết Markdown)
@@ -243,6 +347,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
             />
           </div>
 
+          {/* Tags + Schedule */}
           <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4">
             <div>
               <label className="block text-xs text-white/60 mb-1">
@@ -256,7 +361,7 @@ export function BlogModal({ initial, aiDraft, onClose, onSave }: Props) {
                     e.target.value
                       .split(",")
                       .map((t) => t.trim())
-                      .filter(Boolean)
+                      .filter(Boolean),
                   )
                 }
               />

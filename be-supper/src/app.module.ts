@@ -1,31 +1,47 @@
-// be-supper/src/app.module.ts
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
 import { UsersModule } from './users/users.module';
-import { User } from './users/user.entity';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
+    // Load .env, dùng global
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      username: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASS || 'postgres',
-      database: process.env.DB_NAME || 'forgevault',
-      entities: [User],
-      autoLoadEntities: true,
-      synchronize: true, // chỉ dùng dev
+    // Kết nối MySQL + tự load tất cả entity *.entity.{js,ts}
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'mysql',
+        host: config.get('DB_HOST') || 'mysql',
+        port: +config.get('DB_PORT') || 3306,
+        username: config.get('DB_USER') || 'forge',
+        password: config.get('DB_PASS') || 'forge123',
+        database: config.get('DB_NAME') || 'forgevault',
+
+        // QUAN TRỌNG: load toàn bộ entity trong dist/src
+        entities: [__dirname + '/**/*.entity.{js,ts}'],
+
+        // Không tự sửa schema vì đã có file SQL
+        synchronize: false,
+
+        // Có hay không cũng được, để true cho Nest tự đăng ký khi forFeature
+        autoLoadEntities: true,
+      }),
     }),
 
+    // Các module tính năng
     UsersModule,
     AuthModule,
+    BillingModule,
+    WalletModule,
   ],
 })
 export class AppModule {}

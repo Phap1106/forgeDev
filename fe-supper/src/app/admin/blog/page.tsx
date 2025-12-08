@@ -1,10 +1,8 @@
-// src/app/admin/blog/page.tsx
 "use client";
 
 import React, { useState } from "react";
 import BlogModal, {
   BlogPost,
-  BlogStatus,
 } from "@/components/admin/BlogModal";
 import { DataTable } from "@/components/admin/DataTable";
 
@@ -21,6 +19,7 @@ const MOCK_BLOGS: BlogPost[] = [
     tags: ["proxy", "farm", "tool"],
     status: "published",
     scheduledAt: "",
+    videoUrl: "",
   },
 ];
 
@@ -114,7 +113,7 @@ export default function AdminBlogPage() {
       </div>
 
       <div className="rounded-2xl bg-[#050B10] border border-white/10">
-        <DataTable
+        <DataTable<BlogPost>
           columns={[
             { key: "title", label: "TIÊU ĐỀ" },
             { key: "author", label: "TÁC GIẢ" },
@@ -122,7 +121,7 @@ export default function AdminBlogPage() {
             {
               key: "status",
               label: "TRẠNG THÁI",
-              render: (row: BlogPost) => (
+              render: (_value, row) => (
                 <span
                   className={
                     row.status === "published"
@@ -136,7 +135,7 @@ export default function AdminBlogPage() {
             },
           ]}
           rows={items}
-          getRowId={(row) => row.id!}
+          getRowKey={(row) => row.id!}
           onEdit={(row) => {
             setEditing(row);
             setAiDraft(null);

@@ -1,3 +1,4 @@
+// src/components/admin/Sidebar.tsx
 "use client";
 
 import Link from "next/link";
@@ -6,6 +7,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin" },
   { label: "Tools", href: "/admin/tools" },
+  { label: "Workflows n8n", href: "/admin/workflows" }, // MỚI
   { label: "Users", href: "/admin/users" },
   { label: "Payments", href: "/admin/payment" },
   { label: "Coupons", href: "/admin/coupons" },
