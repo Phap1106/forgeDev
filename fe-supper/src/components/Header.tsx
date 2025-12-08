@@ -1,9 +1,11 @@
+// src/components/Header.tsx
 "use client";
 
 import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -19,6 +21,7 @@ import {
   Trash2,
   LogOut,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useCart } from "@/components/cart/CartContext";
 import AuthModal, { AuthMode } from "@/components/auth/AuthModal";
 
@@ -33,6 +36,30 @@ type CurrentUser = {
   role?: string;
 };
 
+function DropdownItem({
+  label,
+  desc,
+  onClick,
+}: {
+  label: string;
+  desc?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left px-4 py-2 hover:bg-white/10 transition flex flex-col"
+    >
+      <span className="text-[10px] font-semibold text-white/90 uppercase tracking-wide">
+        {label}
+      </span>
+      {desc && (
+        <span className="text-[10px] text-white/55 leading-tight">{desc}</span>
+      )}
+    </button>
+  );
+}
+
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dark, setDark] = useState(true);
@@ -41,6 +68,9 @@ export default function Header() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { items, totalCount, removeItem, clear } = useCart();
 
@@ -122,20 +152,67 @@ export default function Header() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const handleLogout = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("forgevault_token");
-      localStorage.removeItem("forgevault_user");
+  // Đóng menu user khi click ra ngoài
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
     }
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [userMenuOpen]);
+
+  const handleLogout = () => {
+    if (typeof window === "undefined") return;
+
+    const confirmed = window.confirm("Are you sure you want to log out?");
+    if (!confirmed) return;
+
+    localStorage.removeItem("forgevault_token");
+    localStorage.removeItem("forgevault_user");
+
     setCurrentUser(null);
+    setUserMenuOpen(false);
+
+    toast.success("Logged out successfully.");
   };
+
+  const handleUserNavigate = (href: string) => {
+    if (typeof window !== "undefined") {
+      window.location.href = href;
+    }
+    setUserMenuOpen(false);
+  };
+
+  const isAdmin = currentUser?.role === "admin";
+
+  const displayName =
+    currentUser?.fullName ||
+    currentUser?.username ||
+    currentUser?.email?.split("@")[0] ||
+    "User";
+
+  const initials = displayName
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50">
         <div className="bg-black/40 backdrop-blur-xl border-b border-white/10">
           <div className="mx-auto max-w-6xl px-4">
-            {/* Hàng trên */}
+            {/* Top row */}
             <div className="flex h-16 items-center justify-between">
               {/* Logo */}
               <a href="/" className="flex items-center gap-2">
@@ -208,22 +285,114 @@ export default function Header() {
                   )}
                 </button>
 
-                {/* User / Auth buttons */}
-                {currentUser ? (
-                  <div className="hidden md:flex items-center gap-2 text-xs">
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/80">
-                      {currentUser.email}
-                      {currentUser.role === "admin" && " · Admin"}
-                    </span>
+                {/* User dropdown (desktop) */}
+                {currentUser && (
+                  <div className="hidden md:block relative" ref={userMenuRef}>
                     <button
-                      onClick={handleLogout}
-                      className="inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-red-500/90 text-[11px] font-semibold text-black hover:bg-red-400 transition"
+                      onClick={() => setUserMenuOpen((v) => !v)}
+                      className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white/5 ring-1 ring-white/10 hover:bg-white/10 text-[10px] font-medium transition"
                     >
-                      <LogOut className="h-3.5 w-3.5" />
-                      Logout
+                      <div className="h-7 w-7 rounded-full bg-emerald-400/20 ring-1 ring-emerald-400/60 grid place-items-center text-[10px] font-semibold text-emerald-200">
+                        {initials}
+                      </div>
+
+                      <div className="flex flex-col items-start leading-tight">
+                        <span className="text-[10px] font-semibold max-w-[140px] truncate">
+                          {displayName}
+                        </span>
+                        <span className="text-[9px] tracking-wide text-emerald-300/90 uppercase">
+                          {isAdmin ? "Admin" : "User"}
+                        </span>
+                      </div>
+
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition ${
+                          userMenuOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
+
+                    {userMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#0A0F14] ring-1 ring-white/10 shadow-[0_18px_50px_rgba(0,0,0,0.75)] overflow-hidden text-xs animate-fadeIn">
+                        {/* Header */}
+                        <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-emerald-400/20 ring-1 ring-emerald-400/50 grid place-items-center text-[11px] font-semibold text-emerald-200">
+                            {initials}
+                          </div>
+                          <div className="flex-1">
+                            <div className="text-[11px] font-semibold truncate">
+                              {displayName}
+                            </div>
+                            <div className="text-[10px] text-white/60 truncate">
+                              {currentUser.email}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Menu List */}
+                        <div className="py-1">
+                          <DropdownItem
+                            label="Profile"
+                            desc="View & update your personal info"
+                            onClick={() => handleUserNavigate("/account/profile")}
+                          />
+
+                          <DropdownItem
+                            label="Change Password"
+                            desc="Update your account password"
+                            onClick={() => handleUserNavigate("/account/security")}
+                          />
+
+                          <DropdownItem
+                            label="My Orders"
+                            desc="View purchased tools"
+                            onClick={() => handleUserNavigate("/account/orders")}
+                          />
+
+                          <DropdownItem
+                            label="Wallet Top-Up"
+                            desc="Add balance to your ForgeVault wallet"
+                            onClick={() => handleUserNavigate("/billing/deposit")}
+                          />
+
+                          <DropdownItem
+                            label="Transaction History"
+                            desc="Deposit, withdraw & payments"
+                            onClick={() =>
+                              handleUserNavigate("/billing/transactions")
+                            }
+                          />
+
+                          {isAdmin && (
+                            <>
+                              <div className="px-4 mt-2 mb-1 text-[9px] tracking-wide text-white/40 uppercase">
+                                Administration
+                              </div>
+
+                              <DropdownItem
+                                label="Admin Dashboard"
+                                desc="Manage tools, users & orders"
+                                onClick={() => handleUserNavigate("/admin")}
+                              />
+                            </>
+                          )}
+                        </div>
+
+                        {/* Logout */}
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] bg-red-500/90 text-black font-semibold hover:bg-red-400 transition"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
+                )}
+
+                {/* Nếu chưa đăng nhập: nút login / register */}
+                {!currentUser && (
                   <>
                     <button
                       onClick={() => {
@@ -248,7 +417,7 @@ export default function Header() {
                   </>
                 )}
 
-                {/* Mobile menu */}
+                {/* Mobile menu button */}
                 <button
                   onClick={() => setMobileOpen((v) => !v)}
                   className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 ring-1 ring-white/10 hover:bg-white/10 transition"
@@ -314,16 +483,41 @@ export default function Header() {
                     <div className="h-px bg-white/10 my-1" />
 
                     {currentUser ? (
-                      <button
-                        onClick={() => {
-                          handleLogout();
-                          setMobileOpen(false);
-                        }}
-                        className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-red-500/90 text-black hover:bg-red-400 transition"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                      </button>
+                      <div className="grid gap-2">
+                        <button
+                          onClick={() => {
+                            handleUserNavigate("/account/profile");
+                            setMobileOpen(false);
+                          }}
+                          className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-white/10 hover:bg-white/15 transition"
+                        >
+                          <User className="h-4 w-4" />
+                          My Account
+                        </button>
+
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              handleUserNavigate("/admin");
+                              setMobileOpen(false);
+                            }}
+                            className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-emerald-400/20 text-emerald-200 hover:bg-emerald-400/30 transition"
+                          >
+                            Admin Dashboard
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setMobileOpen(false);
+                          }}
+                          className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-red-500/90 text-black hover:bg-red-400 transition"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Logout
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={() => {
