@@ -1,6 +1,3 @@
-
-
-// src/components/Header.tsx
 "use client";
 
 import {
@@ -20,12 +17,21 @@ import {
   LogIn,
   UserPlus,
   Trash2,
+  LogOut,
 } from "lucide-react";
 import { useCart } from "@/components/cart/CartContext";
 import AuthModal, { AuthMode } from "@/components/auth/AuthModal";
 
 type NavItem = { label: string; href: string };
 type NavGroup = { label: string; href?: string; items?: NavItem[] };
+
+type CurrentUser = {
+  id: number | string;
+  email: string;
+  username?: string;
+  fullName?: string;
+  role?: string;
+};
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,6 +40,7 @@ export default function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   const { items, totalCount, removeItem, clear } = useCart();
 
@@ -91,8 +98,21 @@ export default function Header() {
         ],
       },
     ],
-    []
+    [],
   );
+
+  // Load user từ localStorage khi mở trang
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedUser = localStorage.getItem("forgevault_user");
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     const onResize = () => {
@@ -101,6 +121,14 @@ export default function Header() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("forgevault_token");
+      localStorage.removeItem("forgevault_user");
+    }
+    setCurrentUser(null);
+  };
 
   return (
     <>
@@ -180,27 +208,45 @@ export default function Header() {
                   )}
                 </button>
 
-                {/* Login / Register */}
-                <button
-                  onClick={() => {
-                    setAuthMode("login");
-                    setAuthOpen(true);
-                  }}
-                  className="hidden md:inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-white/5 ring-1 ring-white/10 hover:bg-white/10 text-xs font-medium transition hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.97]"
-                >
-                  <LogIn className="h-3.5 w-3.5" />
-                  Login
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthMode("register");
-                    setAuthOpen(true);
-                  }}
-                  className="hidden md:inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/60 text-xs font-medium text-emerald-300 hover:bg-emerald-400/20 transition hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.97]"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Register
-                </button>
+                {/* User / Auth buttons */}
+                {currentUser ? (
+                  <div className="hidden md:flex items-center gap-2 text-xs">
+                    <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-white/80">
+                      {currentUser.email}
+                      {currentUser.role === "admin" && " · Admin"}
+                    </span>
+                    <button
+                      onClick={handleLogout}
+                      className="inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-red-500/90 text-[11px] font-semibold text-black hover:bg-red-400 transition"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Logout
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthOpen(true);
+                      }}
+                      className="hidden md:inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-white/5 ring-1 ring-white/10 hover:bg-white/10 text-xs font-medium transition hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.97]"
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      Login
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAuthMode("register");
+                        setAuthOpen(true);
+                      }}
+                      className="hidden md:inline-flex items-center gap-1 h-9 px-3 rounded-xl bg-emerald-400/10 ring-1 ring-emerald-400/60 text-xs font-medium text-emerald-300 hover:bg-emerald-400/20 transition hover:-translate-y-[1px] active:translate-y-[1px] active:scale-[0.97]"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Register
+                    </button>
+                  </>
+                )}
 
                 {/* Mobile menu */}
                 <button
@@ -267,17 +313,30 @@ export default function Header() {
 
                     <div className="h-px bg-white/10 my-1" />
 
-                    <button
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthOpen(true);
-                        setMobileOpen(false);
-                      }}
-                      className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-white/10 hover:bg-white/15 transition"
-                    >
-                      <User className="h-4 w-4" />
-                      Login / Register
-                    </button>
+                    {currentUser ? (
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setMobileOpen(false);
+                        }}
+                        className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-red-500/90 text-black hover:bg-red-400 transition"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setAuthMode("login");
+                          setAuthOpen(true);
+                          setMobileOpen(false);
+                        }}
+                        className="flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm bg-white/10 hover:bg-white/15 transition"
+                      >
+                        <User className="h-4 w-4" />
+                        Login / Register
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -346,12 +405,15 @@ export default function Header() {
         </Overlay>
       )}
 
-      {/* Auth modal riêng */}
+      {/* Auth modal */}
       <AuthModal
         open={authOpen}
         mode={authMode}
         onClose={() => setAuthOpen(false)}
         onModeChange={setAuthMode}
+        onAuthSuccess={(data) => {
+          setCurrentUser(data.user);
+        }}
       />
     </>
   );

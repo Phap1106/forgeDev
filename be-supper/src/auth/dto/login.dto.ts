@@ -1,10 +1,11 @@
-// be-supper/src/auth/dto/login.dto.ts
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
 
 export class LoginDto {
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @IsNotEmpty()
+  @MinLength(6)
   password: string;
 }

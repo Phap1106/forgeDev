@@ -12,8 +12,8 @@ export type Coupon = {
   description: string;
   discountType: DiscountType;
   value: number;
-  maxUses: number;
-  usedCount: number;
+  maxUses: number;   // số lần dùng tối đa
+  usedCount: number; // số lần đã dùng
   validFrom?: string;
   validTo?: string;
   status: CouponStatus;
@@ -29,15 +29,16 @@ export function CouponModal({ initial, onClose, onSave }: Props) {
   const [code, setCode] = useState(initial?.code ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
   const [discountType, setDiscountType] = useState<DiscountType>(
-    initial?.discountType ?? "percent"
+    initial?.discountType ?? "percent",
   );
-  const [value, setValue] = useState(initial?.value ?? 10);
-  const [maxUses, setMaxUses] = useState(initial?.maxUses ?? 100);
-  const [usedCount] = useState(initial?.usedCount ?? 0);
+  const [value, setValue] = useState<number>(initial?.value ?? 10);
+  const [maxUses, setMaxUses] = useState<number>(initial?.maxUses ?? 100);
+  // usedCount là số đã sử dụng – cho phép xem nhưng không sửa ở đây
+  const [usedCount] = useState<number>(initial?.usedCount ?? 0);
   const [validFrom, setValidFrom] = useState(initial?.validFrom ?? "");
   const [validTo, setValidTo] = useState(initial?.validTo ?? "");
   const [status, setStatus] = useState<CouponStatus>(
-    initial?.status ?? "active"
+    initial?.status ?? "active",
   );
 
   function handleSubmit(e: React.FormEvent) {
@@ -49,7 +50,7 @@ export function CouponModal({ initial, onClose, onSave }: Props) {
       discountType,
       value: Number(value) || 0,
       maxUses: Number(maxUses) || 0,
-      usedCount,
+      usedCount, // giữ nguyên số lần đã dùng
       validFrom: validFrom || undefined,
       validTo: validTo || undefined,
       status,
@@ -156,6 +157,21 @@ export function CouponModal({ initial, onClose, onSave }: Props) {
                 onChange={(e) => setMaxUses(Number(e.target.value))}
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-white/60 mb-1">
+                Đã sử dụng
+              </label>
+              <input
+                type="number"
+                disabled
+                className="w-full h-10 rounded-xl bg-black/40 ring-1 ring-white/15 px-3 text-white/60"
+                value={usedCount}
+              />
+            </div>
+            <div />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
