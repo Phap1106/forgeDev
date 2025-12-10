@@ -7,7 +7,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { WalletModule } from './wallet/wallet.module';
-
+import { ToolsModule } from './tools/tools.module'; 
 @Module({
   imports: [
     // Load .env, dùng global
@@ -42,6 +42,7 @@ import { WalletModule } from './wallet/wallet.module';
     AuthModule,
     BillingModule,
     WalletModule,
+    ToolsModule,
   ],
 })
 export class AppModule {}

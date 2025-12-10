@@ -32,12 +32,8 @@ export class SupportTicket {
   @Column({ name: 'user_id', type: 'int', nullable: true })
   userId?: number | null;
 
-  @ManyToOne(() => User, (user) => user.supportTickets, {
-    nullable: true,
-    onDelete: 'SET NULL',
-  })
-  @JoinColumn({ name: 'user_id' })
-  user?: User | null;
+ @ManyToOne(() => User, { onDelete: 'CASCADE' })
+ user: User;
 
   @Column({
     name: 'category',

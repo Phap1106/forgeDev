@@ -14,7 +14,6 @@ export class ToolRentalPackage extends BaseTimeEntity {
   @Column()
   label: string;
 
-  // Duration tính theo giờ cho dễ convert (1 ngày = 24h, 7 ngày = 168h, ...)
   @Column({ name: 'duration_hours', type: 'int' })
   durationHours: number;
 

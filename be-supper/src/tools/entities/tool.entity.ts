@@ -14,48 +14,59 @@ export class Tool extends BaseTimeEntity {
   @Column({ nullable: true })
   category?: string;
 
-  @Column({ name: 'base_price_vnd', type: 'int' })
-  basePriceVnd: number;
+  @Column({ name: 'price_vnd', type: 'int', default: 0 })
+  priceVnd: number;
 
-  @Column({ name: 'short_description', type: 'varchar', length: 255, nullable: true })
-  shortDescription?: string | null;
+  @Column({ name: 'billing_mode', type: 'varchar', length: 50, default: 'one_time' })
+  billingMode: string; // one_time | rental
 
-  @Column({ name: 'description', type: 'text', nullable: true })
-  description?: string | null;
+  @Column({ name: 'delivery_type', type: 'varchar', length: 50, default: 'download' })
+  deliveryType: string; // online | download
 
-  @Column({ name: 'thumbnail_url', type: 'text', nullable: true })
-  thumbnailUrl?: string | null;
+  @Column({ name: 'hourly_price', type: 'int', nullable: true })
+  hourlyPrice?: number;
 
-  @Column({ name: 'hero_image_url', type: 'text', nullable: true })
-  heroImageUrl?: string | null;
+  // FIX LỖI 100%
+  @Column({
+    name: 'rental_strategy',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  rentalStrategy?: string; // fixed_packages | user_choose
 
-  @Column({ name: 'demo_video_url', type: 'text', nullable: true })
-  demoVideoUrl?: string | null;
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ name: 'tags', type: 'simple-array', nullable: true })
-  tags?: string[] | null;
+  @Column({ name: 'price_label', nullable: true })
+  priceLabel?: string;
 
-  @Column({ name: 'max_concurrent_devices', type: 'int', default: 1 })
-  maxConcurrentDevices: number;
+  @Column({ name: 'hero_image_url', nullable: true })
+  heroImageUrl?: string;
 
-  @Column({ name: 'is_featured', default: false })
-  isFeatured: boolean;
+  @Column({ name: 'live_badge_text', nullable: true })
+  liveBadgeText?: string;
 
-  @Column({ name: 'changelog', type: 'text', nullable: true })
-  changelog?: string | null;
+  @Column({ nullable: true })
+  difficulty?: string;
+
+  @Column({ nullable: true })
+  environment?: string;
 
   @Column({ name: 'update_policy', type: 'text', nullable: true })
-  updatePolicy?: string | null;
+  updatePolicy?: string;
 
   @Column({ name: 'suited_for', type: 'text', nullable: true })
-  suitedFor?: string | null;
+  suitedFor?: string;
 
-  @Column({ default: 'public' })
-  visibility: string; // public, admin
+  @Column({ type: 'varchar', length: 50, default: 'public' })
+  visibility: string;
 
-  @Column({ default: 'draft' })
-  status: string; // draft, active, archived
+  @Column({ type: 'varchar', length: 50, default: 'draft' })
+  status: string;
 
-  @OneToMany(() => ToolRentalPackage, (p) => p.tool, { cascade: true })
+  @OneToMany(() => ToolRentalPackage, (p) => p.tool, {
+    cascade: true,
+  })
   rentalPackages: ToolRentalPackage[];
 }

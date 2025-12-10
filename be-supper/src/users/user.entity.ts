@@ -1,92 +1,3 @@
-// // src/users/user.entity.ts
-// import {
-//   Column,
-//   CreateDateColumn,
-//   Entity,
-//   OneToMany,
-//   PrimaryGeneratedColumn,
-//   UpdateDateColumn,
-// } from 'typeorm';
-// import { BlogPost } from '../blog/entities/blog-post.entity';
-// import { Order } from '../orders/entities/order.entity';
-// import { SupportTicket } from '../support/entities/support-ticket.entity';
-// import { SupportMessage } from '../support/entities/support-message.entity';
-// import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
-// import { UserWallet } from '../wallet/entities/user-wallet.entity';
-
-// @Entity('users')
-// export class User {
-//   @PrimaryGeneratedColumn()
-//   id: number;
-
-//   @Column({ unique: true })
-//   email: string;
-
-//   @Column({ nullable: true })
-//   username?: string;
-
-//   @Column({ name: 'password_hash' })
-//   passwordHash: string;
-
-//   @Column({ name: 'full_name', nullable: true })
-//   fullName?: string;
-
-//   @Column({ default: 'user' })
-//   role: 'user' | 'admin';
-
-//   @Column({ default: 'active' })
-//   status: string;
-
-//   @Column({ name: 'avatar_url', nullable: true })
-//   avatarUrl?: string;
-
-//   @Column({ name: 'last_login_at', type: 'timestamp', nullable: true })
-//   lastLoginAt?: Date | null;
-
-//   @CreateDateColumn({ name: 'created_at' })
-//   createdAt: Date;
-
-//   @UpdateDateColumn({ name: 'updated_at' })
-//   updatedAt: Date;
-
-//   // Relations
-//   @OneToMany(() => BlogPost, (post: BlogPost) => post.author)
-//   blogPosts: BlogPost[];
-
-//   @OneToMany(() => Order, (order: Order) => order.user)
-//   orders: Order[];
-
-//   @OneToMany(
-//     () => SupportTicket,
-//     (ticket: SupportTicket) => ticket.user,
-//   )
-//   supportTickets: SupportTicket[];
-
-//   @OneToMany(
-//     () => SupportMessage,
-//     (message: SupportMessage) => message.user,
-//   )
-//   supportMessages: SupportMessage[];
-
-//  @OneToMany(() => UserWallet, (wallet) => wallet.user)
-//  wallets: UserWallet[];
-
-//   @OneToMany(
-//     () => WalletTransaction,
-//     (tx: WalletTransaction) => tx.user,
-//   )
-//   walletTransactions: WalletTransaction[];
-// }
-
-
-
-
-
-
-
-
-
-
 // src/users/user.entity.ts
 import {
   Column,
@@ -113,7 +24,11 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column({ nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   username?: string;
 
   @Column({ name: 'password_hash' })
@@ -139,7 +54,6 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp', nullable: true })
   updatedAt?: Date;
-
   /* ========== QUAN HỆ ========== */
 
   // blog_posts.author_id
@@ -166,3 +80,5 @@ export class User {
   @OneToMany(() => WalletTransaction, (tx) => tx.user)
   walletTransactions: WalletTransaction[];
 }
+
+

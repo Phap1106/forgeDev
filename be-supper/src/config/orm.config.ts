@@ -9,6 +9,6 @@ export const typeOrmConfig = (config: ConfigService): TypeOrmModuleOptions => ({
   password: config.get<string>('DB_PASS', 'postgres'),
   database: config.get<string>('DB_NAME', 'forgevault'),
   autoLoadEntities: true,
-  synchronize: true, // PROD => false + migrations
+  synchronize: false, // PROD => false + migrations
   logging: config.get<string>('DB_LOGGING', 'false') === 'true',
 });

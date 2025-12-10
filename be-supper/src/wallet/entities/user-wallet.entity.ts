@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { User } from '../../users/user.entity';
 
 @Entity('user_wallets')
@@ -15,8 +16,8 @@ export class UserWallet {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => User, (u) => u.wallet, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn()
   user: User;
 
   @Column({ name: 'balance_dollar', type: 'int', default: 0 })

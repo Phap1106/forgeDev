@@ -1,3 +1,4 @@
+// src/users/users.controller.ts
 import {
   Controller,
   Get,
@@ -27,12 +28,12 @@ export class UsersController {
   }
 
   @Get(':id')
-  get(@Param('id') id: number) {
+  get(@Param('id') id: string) {
     return this.usersService.findById(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: number, @Body() body: Partial<User>) {
+  update(@Param('id') id: string, @Body() body: Partial<User>) {
     return this.usersService.update(+id, body);
   }
 }

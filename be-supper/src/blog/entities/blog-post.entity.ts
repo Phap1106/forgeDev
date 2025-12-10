@@ -32,7 +32,6 @@ export class BlogPost {
   @Column({ type: 'text', nullable: true })
   content?: string | null;
 
-  // 3 cột dưới QUAN TRỌNG: phải là string (varchar), KHÔNG phải Object/any
   @Column({
     name: 'cover_image_url',
     type: 'varchar',
