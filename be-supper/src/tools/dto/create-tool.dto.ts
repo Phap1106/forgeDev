@@ -2,21 +2,29 @@
 import {
   IsString,
   IsOptional,
-  IsEnum,
   IsInt,
   Min,
   IsArray,
   ValidateNested,
+  IsBoolean,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  ToolBillingMode,
-  ToolDeliveryType,
-  ToolVisibility,
-  ToolStatus,
-} from '../entities/tool.entity';
 
-class CreateToolRentalPackageDto {
+// Các giá trị cho một số field string
+export const BILLING_MODES = ['one_time', 'rental'] as const;
+export type BillingMode = (typeof BILLING_MODES)[number];
+
+export const DELIVERY_TYPES = ['online', 'download'] as const;
+export type DeliveryType = (typeof DELIVERY_TYPES)[number];
+
+export const VISIBILITIES = ['public', 'admin'] as const;
+export type Visibility = (typeof VISIBILITIES)[number];
+
+export const TOOL_STATUSES = ['draft', 'active', 'archived'] as const;
+export type ToolStatus = (typeof TOOL_STATUSES)[number];
+
+export class CreateToolRentalPackageDto {
   @IsString()
   code: string;
 
@@ -34,6 +42,7 @@ class CreateToolRentalPackageDto {
   priceVnd: number;
 
   @IsOptional()
+  @IsBoolean()
   isDefault?: boolean;
 }
 
@@ -49,27 +58,44 @@ export class CreateToolDto {
   @IsString()
   category?: string;
 
+  // giá chính dùng cho hiển thị / billing
   @IsOptional()
   @IsInt()
   @Type(() => Number)
   @Min(0)
   priceVnd?: number;
 
-  @IsOptional()
-  @IsEnum(ToolBillingMode)
-  billingMode?: ToolBillingMode;
-
-  @IsOptional()
-  @IsEnum(ToolDeliveryType)
-  deliveryType?: ToolDeliveryType;
+  // nếu muốn dùng thêm base_price_vnd thì thêm field khác
 
   @IsOptional()
   @IsString()
-  description?: string;
+  displayPriceLabel?: string;
 
   @IsOptional()
   @IsString()
   priceLabel?: string;
+
+  @IsOptional()
+  @IsIn(BILLING_MODES as readonly string[])
+  billingMode?: BillingMode;
+
+  @IsOptional()
+  @IsIn(DELIVERY_TYPES as readonly string[])
+  deliveryType?: DeliveryType;
+
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
+  @Min(0)
+  hourlyPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  rentalStrategy?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsOptional()
   @IsString()
@@ -78,6 +104,10 @@ export class CreateToolDto {
   @IsOptional()
   @IsString()
   liveBadgeText?: string;
+
+  @IsOptional()
+  @IsString()
+  heroBadge?: string;
 
   @IsOptional()
   @IsString()
@@ -96,11 +126,11 @@ export class CreateToolDto {
   suitedFor?: string;
 
   @IsOptional()
-  @IsEnum(ToolVisibility)
-  visibility?: ToolVisibility;
+  @IsIn(VISIBILITIES as readonly string[])
+  visibility?: Visibility;
 
   @IsOptional()
-  @IsEnum(ToolStatus)
+  @IsIn(TOOL_STATUSES as readonly string[])
   status?: ToolStatus;
 
   @IsOptional()

@@ -73,20 +73,25 @@ export async function createTool(payload: ToolDto): Promise<ToolDto> {
   return handle<ToolDto>(res);
 }
 
-export async function updateTool(
-  id: number,
-  payload: ToolDto,
-): Promise<ToolDto> {
+export async function updateTool(id: number, data: ToolDto) {
+  // Loại bỏ field id khỏi body
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _omit, ...payload } = data;
+
   const res = await fetch(`${API_BASE}/admin/tools/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders(),
-    },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return handle<ToolDto>(res);
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Failed to update tool");
+  }
+
+  return (await res.json()) as ToolDto;
 }
+
 
 export async function deleteTool(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/admin/tools/${id}`, {

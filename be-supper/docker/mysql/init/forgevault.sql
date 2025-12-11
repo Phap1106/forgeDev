@@ -32,26 +32,49 @@ CREATE TABLE `password_reset_tokens` (
 );
 
 CREATE TABLE `tools` (
-  `id` integer PRIMARY KEY AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `slug` varchar(255) UNIQUE NOT NULL,
-  `category` varchar(255),
-  `base_price_vnd` integer NOT NULL COMMENT 'Giá gốc theo VND',
-  `display_price_label` varchar(255) COMMENT 'VD: $39 / lifetime',
-  `delivery_type` varchar(255) NOT NULL COMMENT 'online, download',
-  `billing_mode` varchar(255) NOT NULL DEFAULT 'one_time' COMMENT 'one_time, rental',
-  `description` text,
-  `hero_image_url` varchar(255),
-  `hero_badge` varchar(255),
-  `difficulty` varchar(255),
-  `environment` varchar(255),
-  `update_policy` varchar(255),
-  `suited_for` text COMMENT 'danh sách bullet, có thể lưu dạng text hoặc JSON',
-  `visibility` varchar(255) NOT NULL DEFAULT 'public' COMMENT 'public, admin',
-  `status` varchar(255) NOT NULL DEFAULT 'draft' COMMENT 'draft, active, archived',
-  `created_at` timestamp,
-  `updated_at` timestamp
-);
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name`              VARCHAR(255) NOT NULL,
+  `slug`              VARCHAR(255) NOT NULL UNIQUE,
+  `category`          VARCHAR(255) DEFAULT NULL,
+
+  -- Giá gốc (schema cũ)
+  `base_price_vnd`      INT NOT NULL COMMENT 'Giá gốc theo VND',
+
+  -- Giá chính mà backend đang dùng
+  `price_vnd`           INT NOT NULL DEFAULT 0 COMMENT 'Giá dùng cho billing / hiển thị',
+
+  -- Nhãn giá
+  `display_price_label` VARCHAR(255) DEFAULT NULL COMMENT 'VD: $39 / lifetime (schema cũ)',
+  `price_label`         VARCHAR(255) DEFAULT NULL COMMENT 'Nhãn giá hiển thị cho UI mới',
+
+  -- Cấu hình billing
+  `delivery_type`     VARCHAR(50) NOT NULL COMMENT 'online, download',
+  `billing_mode`      VARCHAR(50) NOT NULL DEFAULT 'one_time' COMMENT 'one_time, rental',
+  `hourly_price`      INT DEFAULT 0 COMMENT 'Giá theo giờ (nếu dùng thuê theo giờ)',
+  `rental_strategy`   VARCHAR(50) DEFAULT NULL COMMENT 'Chiến lược thuê: none, package, ...',
+
+  -- Nội dung & hiển thị
+  `description`       TEXT,
+  `hero_image_url`    VARCHAR(255) DEFAULT NULL,
+  `live_badge_text`   VARCHAR(255) DEFAULT NULL,
+  `hero_badge`        VARCHAR(255) DEFAULT NULL,
+  `difficulty`        VARCHAR(255) DEFAULT NULL,
+  `environment`       VARCHAR(255) DEFAULT NULL,
+  `update_policy`     VARCHAR(255) DEFAULT NULL,
+  `suited_for`        TEXT COMMENT 'danh sách bullet, có thể lưu dạng text hoặc JSON',
+
+  -- Trạng thái / phân quyền
+  `visibility`        VARCHAR(50) NOT NULL DEFAULT 'public' COMMENT 'public, admin',
+  `status`            VARCHAR(50) NOT NULL DEFAULT 'draft' COMMENT 'draft, active, archived',
+
+  -- Thời gian
+  `created_at`        TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`        TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
 
 CREATE TABLE `tool_rental_packages` (
   `id` integer PRIMARY KEY AUTO_INCREMENT,

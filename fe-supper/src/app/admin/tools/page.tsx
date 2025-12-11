@@ -31,24 +31,25 @@ export default function AdminToolsPage() {
     })();
   }, []);
 
-  const columns: DataTableColumn<ToolDto>[] = [
+   const columns: DataTableColumn<ToolDto>[] = [
     { label: "Name", key: "name" },
     { label: "Category", key: "category" },
     {
       label: "Base price",
-      render: (row) =>
+      render: (_value, row) =>
         `${(row.priceVnd ?? 0).toLocaleString("vi-VN")} VND`,
     },
     {
       label: "Billing",
-      render: (row) =>
+      render: (_value, row) =>
         row.billingMode === "rental" ? "Rental" : "One-time",
     },
     {
       label: "Status",
-      render: (row) => row.status ?? "draft",
+      render: (_value, row) => row.status ?? "draft",
     },
   ];
+
 
   async function handleSave(tool: ToolDto) {
     try {
